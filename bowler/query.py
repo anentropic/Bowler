@@ -10,9 +10,8 @@ import logging
 import pathlib
 import re
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, cast
+from typing import Callable, List, Optional, Type, TypeVar, Union, cast
 
-from attr import Factory, dataclass
 from fissix.fixer_base import BaseFix
 from fissix.fixer_util import Attr, Comma, Dot, LParen, Name, Newline, RParen
 from fissix.pytree import Leaf, Node, type_repr

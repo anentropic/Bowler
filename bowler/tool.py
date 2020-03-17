@@ -11,12 +11,13 @@ import multiprocessing
 import os
 import time
 from queue import Empty
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Iterator, List, Optional, Sequence, Tuple
 
 import click
 import sh
+from fissix import pygram
 from fissix.pgen2.parse import ParseError
-from fissix.refactor import RefactoringTool
+from fissix.refactor import RefactoringTool, _detect_future_features
 
 from .helpers import filename_endswith
 from .types import (
@@ -27,7 +28,6 @@ from .types import (
     FilenameMatcher,
     Fixers,
     Hunk,
-    Node,
     Processor,
     RetryFile,
 )
@@ -140,6 +140,9 @@ class BowlerTool(RefactoringTool):
             if hunk:
                 hunks.append([a, b, *hunk])
 
+            features = _detect_future_features(new_text)
+            if "print_function" in features:
+                self.driver.grammar = pygram.python_grammar_no_print_statement
             try:
                 new_tree = self.driver.parse_string(new_text)
                 if new_tree is None:

@@ -8,7 +8,7 @@
 from unittest import mock
 
 from ..query import SELECTORS, Query
-from ..types import TOKEN, BowlerException, Leaf
+from ..types import TOKEN, Leaf
 from .lib import BowlerTestCase
 
 
@@ -46,6 +46,62 @@ class QueryTest(BowlerTestCase):
                 ("g()", "g()"),
             ],
             query_func=query_func,
+        )
+
+    def test_parse_print_func_py3(self):
+        def select_print_func(arg):
+            return Query(arg).select_function("print").rename("foo")
+
+        self.run_bowler_modifiers(
+            [
+                ("print \"hello world\"", "print \"hello world\""),  # why no parse error?
+                ("print(\"hello world\")", "foo(\"hello world\")"),
+                ("print(\"hello world\", end=\"\")", "foo(\"hello world\", end=\"\")"),
+            ],
+            query_func=select_print_func,
+        )
+
+    def test_parse_print_func_py2(self):
+        def query_func(arg):
+            return Query(arg, python_version=2).select_function("print").rename("foo")
+
+        def modifier(node, capture, filename):
+            print("HEEEEELLLLLOOOOOO")
+            new_string = Leaf(TOKEN.STRING, "new text")
+            capture["value"].replace(new_string)
+            return node
+
+        def select_print_stmt(arg):
+            return (
+                Query(arg)
+                .select("""
+                    print_stmt <
+                        (
+                            'print' value='"hello world"'
+                        |
+                            'print' atom < '(' value='"hello world"' any* ')' >
+                        )
+                    >
+                """)
+                .modify(modifier)
+            )
+
+        output = self.run_bowler_modifiers(
+            [
+                ("print \"hello world\"", "print \"hello world\""),  # why no parse error?
+                ("print(\"hello world\")", "print(\"hello world\")"),
+                ("print(\"hello world\", end=\"\")", "print(\"hello world\", end=\"\")"),
+            ],
+            query_func=query_func,
+        )
+
+        self.run_bowler_modifiers(
+            [
+                ("print \"hello world\"", "print \"new text\""),  # why no parse error?
+                ("print(\"hello world\")", "print(\"new text\")"),
+                ("print(\"hello world\", end=\"\")", "print(\"new text\", end=\"\")"),
+            ],
+            query_func=select_print_stmt,
         )
 
     def test_rename_class(self):
